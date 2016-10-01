@@ -52,6 +52,8 @@ SpectralWorkbench::Application.routes.draw do
 
   # See how all your routes lay out with 'rake routes'
 
+  mount JasmineRails::Engine => "/specs" if defined?(JasmineRails)
+
   get '/local/:login' => 'sessions#local'
   get '/logout' => 'sessions#logout'
   get '/login' => 'sessions#login'
@@ -88,13 +90,31 @@ SpectralWorkbench::Application.routes.draw do
 
   get '/upload' => 'spectrums#new'
 
-  resources :users
+  get '/tags/change_reference/:id' => 'tags#change_reference'
+
+  get '/spectrums/choose' => 'spectrums#choose' # for pagination in adding spectrums to sets, for some reason needed to explicitly set this?
+
+  resources :users do
+    resources :spectrums
+    resources :tags
+    resources :macros
+    resources :sets
+    resources :comments
+  end
+  resources :snapshots
+  resources :macros
   resources :session
-  resources :tags
-  resources :sets
+  resources :tags do
+    resources :snapshots
+  end
+  resources :sets do 
+    resources :comments
+  end
   resources :comments, :belongs_to => :spectrums
   resources :spectrums do
+    resources :snapshots
     resources :comments
+    resources :tags
     member do
       get :clone_search
       get :compare_search
@@ -110,6 +130,8 @@ SpectralWorkbench::Application.routes.draw do
   get '/analyze/spectrum/:id.:format', to: redirect('/spectrums/%{id}.%{format}')
   get '/spectra/show/:id.:format', to: redirect('/spectrums/%{id}.%{format}')
   get '/spectra/show/:id', to: redirect('/spectrums/%{id}')
+  get '/sets/show/:id.:format', to: redirect('/sets/%{id}.%{format}')
+  get '/sets/show/:id', to: redirect('/sets/%{id}')
 
   get '/spectra/assign' => 'spectrums#assign'
   get '/spectra/feed' => 'spectrums#rss', defaults: { format: 'xml' }
@@ -137,8 +159,8 @@ SpectralWorkbench::Application.routes.draw do
     cache ActionController::Base.helpers.asset_path("capture.js")
     cache ActionController::Base.helpers.asset_path("analyze.js")
 
-    cache "/capture"
-    #cache "/capture/offline"
+    #cache "/capture"
+    cache "/capture/offline"
     cache "/offline"
 
     cache "/images/spectralworkbench.png"

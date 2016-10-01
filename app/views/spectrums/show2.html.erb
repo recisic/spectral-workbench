@@ -1,0 +1,152 @@
+<%= render :partial => "embed/modal", :locals => { datum: @spectrum, type: :spectrum } %>
+
+<div class="swb-spectrum-img-container">
+  <% if @spectrum.photo_file_name %>
+    <img class="spectrum" src="<%= @spectrum.photo.url(:original) %>" />
+  <% else %>
+    <p style="color:#888;padding:20px 0 0;text-align:center;"><small>No image for this spectrum.</small></p>
+  <% end %>
+</div>
+
+<div id="graphing" class="swb-graphing spectrums">
+
+  <div id="graph">
+    <div class="zoom"><a onClick="graph.zoom();" class="btn-zoom"><i class="fa fa-zoom-in"></i></a></div>
+    <i class="fa fa-spinner fa-spin"></i>
+  </div>
+
+    <script type="text/javascript">
+ 
+    var graph, spectrum; // for debugging, and currently, some ToolPane calls :-(
+    jQuery(document).ready(function($) {
+      graph = new SpectralWorkbench.Graph({
+        spectrum_id: <%= @spectrum.id %>,
+        // the following will be deprecated for snapshot/tag-based metadata
+        calibrated: <%= @spectrum.calibrated %>,
+        range: <%= @spectrum.has_powertag('range') ? @spectrum.range : false %>,
+        <% if @spectrum.photo_file_name %>image_url: "<%= @spectrum.photo.url(:original) %>",<% end %>
+        sample_row: <%= @spectrum.sample_row %>
+      }, function() {
+
+        // for console use
+        spectrum = graph.datum;
+
+      });
+
+    });
+ 
+    </script>
+ 
+    <%= render :partial => "graph/header", :locals => {type: :spectrum, datum: @spectrum } %>
+ 
+    <div class="row-fluid below">
+      <div class="col span12">
+  
+        <div class="row-fluid">
+        
+          <div class="span4">
+  
+            <div class="btn-group">
+
+              <%= render partial: "likes/buttons", locals: { datum: @spectrum } %>
+  
+            </div>
+  
+            <% if logged_in? && current_user.login == @spectrum.author %>
+  
+              <div class="btn-group">
+                <a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>/edit"><i class="fa fa-pencil"></i></a>
+                <% if @spectrum.is_deletable? %>
+                  <%= link_to '<i class="fa fa-trash"></i>'.html_safe, "/spectrums/destroy/#{@spectrum.id}", :confirm => 'Are you sure?', :class => "btn btn-small" %>
+                <% else %>
+                  <a rel="tooltip" title="You cannot delete this because other spectra rely upon its data. Remove these dependencies and this will be enabled." class="btn btn-small disabled"><i class="fa fa-trash"></i></a>
+                <% end %>
+              </div>
+  
+            <% end %>
+
+            <p style="margin-top:10px;color:#888;"><small><i>Uploaded on <%= @spectrum.created_at.to_s(:long) %> UTC</i></small></p>
+
+            <p><% if @spectrum.notes %><%=raw RDiscount.new(@spectrum.notes).to_html %><% end %></p>
+
+            <hr />
+  
+            <%= render partial: 'graph/notifications', locals: { type: :spectrum } %>
+  
+            <hr />
+  
+            <div class="btn-group export">
+  
+              <a target="_blank" class="btn btn-small svg" onClick="SpectralWorkbench.API.Core.exportSVG('spectrum-<%= @spectrum.id %>');"><b>SVG</b></a>
+              <a target="_blank" rel="tooltip" title="Currently displayed data" class="btn btn-small btn-download-json"><b>JSON</b></a>
+              <a target="_blank" rel="tooltip" title="Most recent snapshot" class="btn btn-small" href="/spectrums/latest/<%= @spectrum.id %>.json"><b>raw JSON</b></a>
+              <a target="_blank" class="btn btn-small" href="/spectrums/latest/<%= @spectrum.id %>.csv"><b>CSV</b></a>
+              <a target="_blank" class="btn btn-small" href="/spectrums/latest/<%= @spectrum.id %>.xml"><b>XML</b></a>
+              <a rel="tooltip" class="btn btn-small" href="//publiclab.org/wiki/spectral-workbench-exporting" title="About export formats"><i class="fa fa-question-circle"></i></a>
+  
+            </div>
+  
+            <hr />
+  
+            <%= render partial: 'tags/tagging', locals: { datum: @spectrum, type: :spectrum, legacy: false } %>
+  
+          </div>
+        
+          <div class="span8">
+  
+            <ul class="nav nav-tabs">
+              <li class="active"><a class="tab-tab-tools"    href="#tab-tools"              data-toggle="tab"><i class="fa fa-cog"></i> Tools</a></li>
+              <li>               <a class="tab-tab-sets"     href="#tab-sets"               data-toggle="tab"><i class="fa fa-list"></i> Sets</a></li>
+              <li>               <a class="tab-tab-comments" href="#tab-comments"           data-toggle="tab"><i class="fa fa-comments"></i> <%= @spectrum.comments.length %> Comments</a></li>
+              <% if @spectrum.forks %><li><a class="tab-tab-forks" href="#tab-forks"     data-toggle="tab"><i class="fa fa-code-fork"></i> <%= @spectrum.forks.length %> Forks</a></li><% end %>
+              <li>               <a class="tab-tab-scripting" href="#tab-scripting"          data-toggle="tab"><i class="fa fa-terminal"></i> Scripting</a></li>
+              <li class="comparisons" style="display:none;"><a class="tab-tab-comparisons" href="#tab-comparisons" data-toggle="tab"><i class="fa fa-columns"></i> Comparisons</a></li>
+            </ul>
+           
+            <div class="tab-content">
+
+              <div class="tab-pane active" id="tab-tools">
+                <%= render partial: 'spectrums/tools', locals: { datum: @spectrum, type: :spectrum } %>
+              </div>
+
+              <div class="tab-pane" id="tab-comparisons">
+
+                <p>These spectra are being temporarily displayed for comparison; <a onClick="graph.refresh();$('table.comparisons tr.spectrum').remove();">Clear all</a></p>
+
+                <table class="table comparisons">
+                  <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Tools</th>
+                  </tr>
+                </table>
+
+                <p><a target="_blank" class="btn btn-save-as-set">Save these as a set</a></p>
+
+              </div>
+
+              <div class="tab-pane" id="tab-sets">
+                <%= render partial: 'graph/sets', locals: { sets: @spectrum.sets } %>
+              </div>
+             
+              <div class="tab-pane" id="tab-comments">       
+                <%= render partial: 'comments/list', locals: { datum: @spectrum, comments: @spectrum.comments } %>
+              </div>
+             
+              <div class="tab-pane" id="tab-forks">
+                <%= render partial: 'spectrums/list_table', locals: { spectrums: @spectrum.forks } %>
+              </div>
+             
+              <div class="tab-pane" id="tab-scripting">
+                <%= render partial: 'macros/scripting' %>
+              </div>
+           
+            </div>
+
+          </div>
+    
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

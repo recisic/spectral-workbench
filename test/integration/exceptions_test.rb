@@ -31,15 +31,26 @@ class ExceptionsTest < ActionController::IntegrationTest
     assert_response :success
   end
 
-  test "GET /sets/show/#" do
+  test "GET /sets/#" do
     set = SpectraSet.find :first
-    get "/sets/show/#{set.id}"
+    get "/sets/#{set.id}"
     assert_response :success
   end
 
   test "GET /tags" do
     get "/tags"
     assert_response :success
+  end
+
+  test "GET /upload when not logged in" do
+    get "/upload"
+    assert_response :redirect
+  end
+
+  test "GET /upload" do
+    @user = users(:quentin) # log in
+    get "/upload"
+    assert_response :redirect
   end
 
 end

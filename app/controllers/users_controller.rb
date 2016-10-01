@@ -11,7 +11,7 @@ class UsersController < ApplicationController
 
   def dashboard
     @offline = "flush"
-    @spectrums = Spectrum.paginate(:order => "created_at DESC", :conditions => ["author != 'anonymous'"], :page => params[:spectrums_page], :per_page => 50)
+    @spectrums = Spectrum.order('created_at DESC').where('user_id != 0').paginate(:page => params[:page],:per_page => 24)
     @sets = SpectraSet.paginate(:page => params[:sets_page], :order => "created_at DESC", :per_page => 25)
     @comments = Comment.paginate(:page => params[:comments_page], :order => "created_at DESC", :per_page => 40)
     @users = User.paginate(:page => params[:users_page], :order => "created_at DESC", :per_page => 100)
@@ -39,22 +39,8 @@ class UsersController < ApplicationController
     @sets = @user.sets.order("created_at DESC").paginate(:page => params[:set_page], :per_page => 2)
   end
 
-  ##### Admin only: #####
-
-  def delete
-    if current_user.role == "admin"
-      @user = User.find(params[:id])
-      @user.delete
-      flash[:notice] = "User "+@user.name+" deleted."
-      redirect_to "/"
-    else
-      flash[:error] = "You must be an admin to delete users."
-      redirect_to "/login"
-    end
-  end
-
   def index
-    if current_user.role == "admin"
+    if logged_in? && current_user.role == "admin"
       @users = User.find :all
     else
       flash[:error] = "You must be an admin to view the users listing."

@@ -2,12 +2,9 @@
 // window.webcam.getCameraList()
 $W = {
   data: null,
-  chrome_cameras: [],
-  chrome_current_camera: 0,
   baseline: null,
   full_data: [],
   unflipped_data: [],
-  detect_flip: false,
   flipped: false,
   rotated: false,
   pos: 0,
@@ -24,7 +21,7 @@ $W = {
 
   initialize: function(args) {
     this.mobile = args['mobile'] || false
-    this.flipped = args['flipped'] || false
+    this.flipped = args['flipped'] == true || false
     this.interface = args['interface'] || false
     this.mode = args['mode'] || 'combined'
     flotoptions.colors = [ "#ffffff", "rgba(255,0,0,0.3)", "rgba(0,255,0,0.3)", "rgba(0,0,255,0.3)", "#ffff00"]
@@ -35,7 +32,13 @@ $W = {
       this.options.height = args['height']
       this.options.width = args['width']
     }
-    this.sample_start_row = localStorage.getItem('sw:samplestartrow') || this.width/2 // this is camera sample row, not saved image sample row!
+
+    if (args.video_row) {
+      this.sample_start_row = args.video_row;
+    } else {
+      // this is camera sample row, not saved image sample row!
+      this.sample_start_row = localStorage.getItem('sw:samplestartrow') || this.width/2;
+    }
     this.setSampleRow(this.sample_start_row)
 
     getUserMedia(this.options, this.success, this.deviceError)
@@ -53,7 +56,20 @@ $W = {
       this.preview_ctx = $('#preview')[0].getContext('2d')
     }
 
-    setInterval($W.alert_overexposure,3000)
+    setInterval($W.alert_overexposure, 500); // every 0.5 seconds
+    setInterval(function() {
+
+      $W.getRecentCalibrations('.select-calibration');
+
+    }, 10000); // every 10 seconds
+    $('.btn-switch-calibration-configure').click(function() {
+      window.location = "/capture?calibration_id=" + $('.select-calibration-configure').val()
+    });
+
+    $('.btn-switch-calibration-capture').click(function() {
+      window.location = "/capture?calibration_id=" + $('.select-calibration-capture').val()
+    });
+
     $W.data = [{label: "webcam",data:[]}]
     if ($('video')[0]) {
       $('video')[0].width = "320"
@@ -82,7 +98,11 @@ $W = {
         stream.stop();
       };
       //video.play()
-      $W.chromeCameraSelect()
+      // flip image horiz. based on init terms
+      if ($W.flipped == true) {
+        $W.flipped = false; // <= turn it false because f_h() will toggle it. messy.
+        $W.flip_horizontal();
+      }
     } else {
       //flash context
       console.log('flash or something else')
@@ -157,38 +177,6 @@ $W = {
     onLoad: function () {}
   },
 
-  chromeCameraSwitch: function() {
-    $W.chrome_current_camera += 1
-    if ($W.chrome_current_camera > $W.chrome_cameras.length-1) $W.chrome_current_camera = 0
-    var id = $W.chrome_cameras[$W.chrome_current_camera].id
-    var options = {
-      el: $W.options.el,
-      audio: {
-      },
-      video: {
-        optional: [{sourceId: id}]
-      }
-    }
-    // skipping the shim here... couldn't get it to work, and this switcher is Chrome-only
-    navigator.getUserMedia_(options, $W.success, $W.deviceError);
-  },
-
-  chromeCameraSelect: function() {
-
-    var v = parseInt(navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./)[2], 10)
-    // if chrome v30+
-    if (navigator.webkitGetUserMedia && v >= 30) {
-      MediaStreamTrack.getSources(function(a){
-        $.each(a,function(i,source) {
-          if (source.kind == "video") $W.chrome_cameras.push(source)
-        })
-      });
-
-    }
-
-
-  },
-
   // Draws the appropriate pixels onto the top row of the waterfall.
   // Override this if you want a non-linear cross section or somethine
   // else special! <video> is the video element
@@ -219,7 +207,7 @@ $W = {
         $W.ctx.drawImage(video,0,-$W.sample_start_row)
       }
 
-      // testing line; go to http://spectralworkbench.org/capture?debug=true
+      // testing line; go to //spectralworkbench.org/capture?debug=true
       if ($W.debug_tmp) $W.debug_log = "$W.height="+$W.height+" $W.width="+$W.width+" #canvas height="+$('#canvas').height()
     }
   },
@@ -230,8 +218,6 @@ $W = {
       var video = $('video')[0];
       // Grab the existing canvas:
       var saved = $W.excerptCanvas(0,0,$W.width,$W.height,$W.ctx).getImageData(0,0,$W.width,$W.height)
-      // check for flipped spectrum every 10th frame... deprecated
-      if ($W.detect_flip && ($W.frame/10 - parseInt($W.frame/10) == 0)) $W.autodetect_flipness()
 
       // manipulate the canvas to get the image to copy onto the canvas in the right orientation
       $W.ctx.save()
@@ -251,8 +237,12 @@ $W = {
       $W.preview_ctx.canvas.width = $('#preview').width()
       $W.preview_ctx.canvas.height = $('#preview').width()*0.75
       $('#preview').height($('#preview').width()*0.75)
+      if ($W.flipped) {
+        $W.preview_ctx.translate($('#preview').width(),0)
+        $W.preview_ctx.scale(-1,1)
+      }
       $W.preview_ctx.drawImage($('video')[0],0,0,$('#preview').width(),$('#preview').width()*0.75)
-      $("#heightIndicatorPrev").width($('#sidebar').width())
+      if ($W.rotated != true) $("#heightIndicatorPrev").width($('#sidebar').width())
       $W.resetHeightIndicators(false)
     }
 
@@ -377,42 +367,31 @@ $W = {
     $('#video_row').val($W.sample_start_row)
     if ($('#geotag-toggle').length > 0) $('#geotag').val($('#geotag-toggle')[0].checked)
     setTimeout(function() { if ($('#geotag').val() == "true") $W.geolocate() },500)
-    this_.getRecentCalibrations()
+    this_.getRecentCalibrations("#calibration_id");
   },
-  getRecentCalibrations: function() {
+
+  getRecentCalibrations: function(selector) {
     $.ajax({
-      url: "/capture/recent_calibrations",
+      url: "/capture/recent_calibrations.json?calibration_id=" + $W.calibration_id,
       type: "GET",
       success: function(data) {
         var html = "<option value='calibration'>[+] New calibration/uncalibrated</option>"
         $.each(data, function(index, spectrum) {
-          html += "<option value="+spectrum.id+">"+spectrum.title+" ("+spectrum.created_at_in_words+" ago)</option>"
+          html += "<option "
+          if ($W.calibration_id == spectrum.id) html += "selected "
+          html += "value="+spectrum.id+">#"+spectrum.id+": "+spectrum.title+" (";
+          if (spectrum.forked) html += "forked ";
+          html += spectrum.created_at_in_words+" ago)</option>";
         });
-        $("#calibration_id").html(html);
+        $(selector).html(html);
       }
     })
   },
+
   cancelSave: function() {
     $('#geotag').val('false')
     $('#lon').val('')
     $('#lat').val('')
-  },
-
-  match: function() {
-    cols = []
-    $.each($W.full_data,function(i,datum) {
-      cols.push(i+":"+datum[3])
-    })
-    $("#match").html("<p><img src='/images/spinner-green.gif' /></p>");
-    $.ajax({
-      url: "/sets/find_match/"+$W.set+"?calibration="+$W.calibration_id,
-      type: "POST",
-      data: {data: cols.join(',')},
-      //context: document.body
-      success: function(result) {
-        $("#match").html("<p>"+result+"</p>");
-      }
-    })
   },
 
   auto_detect_sample_row: function() {
@@ -503,6 +482,7 @@ $W = {
     $W.width_percent = start/$W.width
     $W.height_percent = start/$W.height
     $W.resetHeightIndicators(legacy)
+    $('#video_row').val($W.sample_start_row);
   },
   resetHeightIndicators: function(legacy) {
     if ($W.rotated) {
@@ -567,6 +547,8 @@ $W = {
 
   flip_horizontal: function() {
     $W.flipped = !$W.flipped
+    if ($W.flipped == true) $('.btn-flip').addClass('active');
+    else                    $('.btn-flip').removeClass('active');
     $('#spectrum_reversed').val($('#spectrum_reversed').val() == 'false')
     var style = $('#webcam video')[0].style
     if ($W.flipped) {
@@ -588,6 +570,8 @@ $W = {
 
   toggle_rotation: function() {
     $W.rotated = !$W.rotated
+    if ($W.rotated == true) $('.btn-rotate').addClass('active');
+    else                    $('.btn-rotate').removeClass('active');
     var style = $('#heightIndicator')[0].style
     var stylePrev = $('#heightIndicatorPrev')[0].style
     if ($W.rotated) {
@@ -601,6 +585,10 @@ $W = {
       stylePrev.borderRightWidth = "2px"
       stylePrev.height = "100px"
       stylePrev.width = "0px"
+      $('#heightIndicator .vertical').show();
+      $('#heightIndicator .horizontal').hide();
+      $('.spectrum-example-horizontal').hide();
+      $('.spectrum-example-vertical').show();
     } else {
       style.marginLeft = '0px';
       style.borderBottomWidth = "2px"
@@ -612,19 +600,15 @@ $W = {
       stylePrev.borderRightWidth = "0px"
       stylePrev.width = "100%"
       stylePrev.height = "0px"
+      $('#heightIndicator .vertical').hide();
+      $('#heightIndicator .horizontal').show();
+      $('.spectrum-example-horizontal').show();
+      $('.spectrum-example-vertical').hide();
     }
     // reset the indicator to the correct sample row:
     $W.setSampleRows($W.sample_start_row,$W.sample_start_row)
   },
 
-  // poorly named; this actually toggles "flippedness detection"
-  toggle_flip: function() {
-    $W.detect_flip = !$W.detect_flip
-  },
-  // Changes $W.flipped based on detecting where the red end of the spectrum is
-  autodetect_flipness: function() {
-    if (!$W.mobile) $W.flipped = !$W.is_data_ascending_in_nm()
-  },
   is_data_ascending_in_nm: function() {
     var left_redness = 0, right_redness = 0
     // sum redness and unblueness for each half
@@ -724,14 +708,21 @@ $W = {
   },
   // checks overexposure and displays an alert if it is so, and what channel
   alert_overexposure: function() {
+    console.log('Checking for overexposure');
     var oe = $W.detect_overexposure()
     if (oe.r || oe.g || oe.b) {
-      var msg = "Light source is too strong; overexposure in channels: "
+      var msg = "<b>Light source too strong</b>; clipping in channels: "
       var channels = []
       if (oe.r) channels.push("red")
       if (oe.g) channels.push("green")
       if (oe.b) channels.push("blue")
-      $W.notify(msg+channels.join(','),"warning")
+      $W.notify(msg+channels.join(', '),"warning")
+      // notify is not working in capture, not sure why...
+      $('.capture-navbar .capture-messages').html(msg + channels.join(', '));
+      $('.capture-navbar').addClass('red');
+    } else {
+      $('.capture-navbar .capture-messages').html('');
+      $('.capture-navbar').removeClass('red');
     }
   },
 

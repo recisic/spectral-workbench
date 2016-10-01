@@ -17,10 +17,17 @@
       <%= render :partial => 'spectrums/search' %>
 
       <div class="hidden-phone">
+
         <p><strong>Subscribe to the "plots-spectrometry" mailing list</strong> for support, discussion, and to share your work:</p>
-        <form class="form form-inline" action="http://groups.google.com/group/plots-spectrometry/boxsubscribe"><input placeholder="you@email.com" class="input-medium" type=text name=email /> <input class="btn btn-primary" type=submit name="sub" value="Subscribe" /></form>
+        <form class="form form-inline" action="https://groups.google.com/group/plots-spectrometry/boxsubscribe"><input placeholder="you@email.com" class="input-medium" type=text name=email /> <input class="btn btn-primary" type=submit name="sub" value="Subscribe" /></form>
 
         <hr />
+
+        <p><a href="https://publiclab.org/post?tags=question:spectral-workbench&template=question" class="btn btn-primary"><i class="fa fa-question-circle fa-white"></i> Post a question</a> &nbsp;to get help from other users.</p>
+
+        <p><a href="https://publiclab.org/subscribe/tag/question:spectral-workbench" class="btn">Sign up</a> &nbsp;to help answer questions from other community members or <a href="https://publiclab.org/tag/question:spectral-workbench">browse questions here</a>.</p>
+
+        <iframe style="margin-top:10px;border:none;width:100%;height:180px;" src="https://publiclab.org/features/embed/spectral-workbench-sidebar"></iframe>
 
         <ul class="nav nav-list">
           <li class="nav-header">Support</li>
@@ -37,15 +44,6 @@
           <li><a href="http://publiclab.org/wiki/spectral-analysis">Applications and ideas</a></li>
         </ul>
 
-        <hr />
-
-        <a href="http://store.publiclab.org/products/smartphone-spectrometer"><img src="/images/smart-spec.jpg"/></a>
-        <hr />
-        <a href="http://store.publiclab.org/products/desktop-spectrometry-kit"><img src="/images/dsk.jpg"/></a>
-        <hr />
-
-        <hr />
-
       </div>
 
 
@@ -53,19 +51,25 @@
 
     <div class="span8 pull-right">
 
-      <div class="alert"><a href="http://publiclab.org/notes/warren/02-10-2015/planning-for-spectral-workbench-2-0">Learn more</a> about the upcoming Spectral Workbench 2.0 relaunch, provide suggestions and get involved.</div>
+      <%= render :partial => 'users/wizard' %>
 
-      <div class="hidden-phone">
-        <h3>Recent community research <small>| <a href="http://publiclab.org/post">Share your own work &raquo;</a></small></h3>
-        <iframe style="margin-bottom:20px;height:400px;width:100%;border:none;" src="http://publiclab.org/widget/spectrometer"></iframe>
-      </div>
+      <!--<div class="alert">Learn more about the new <a href="https://publiclab.org/notes/warren/02-10-2016/announcing-spectral-workbench-2">Spectral Workbench 2</a>.</div>-->
+
+      <% if Rails.env == "production" %>
+        <div class="hidden-phone">
+          <h3>Recent community research <small>| <a href="https://publiclab.org/tag/spectrometer">More</a> | <a href="http://publiclab.org/post">Share your own work &raquo;</a></small></h3>
+ 
+          <%= render :partial => 'users/research_notes' %>
+ 
+        </div>
+      <% end %>
 
       <ul class="nav nav-tabs">
-        <li class="active"><a data-toggle="tab" href="#spectra"><i class="icon icon-signal"></i><span class="hidden-phone"> Spectra</span></a></li>
-        <li><a data-toggle="tab" href="#comments"><i class="icon icon-comment"></i><span class="hidden-phone"> Comments</span></a></li>
-        <li><a data-toggle="tab" href="#sets"><i class="icon icon-list"></i><span class="hidden-phone"> Sets</span></a></li>
-        <li><a data-toggle="tab" href="#authors"><i class="icon icon-user"></i><span class="hidden-phone"> Authors</span></a></li>
-        <li><a data-toggle="tab" href="#tags"><i class="icon icon-tag"></i><span class="hidden-phone"> Tags</span></a></li>
+        <li class="active"><a data-toggle="tab" href="#spectra"><i class="fa fa-signal"></i><span class="hidden-phone"> Spectra</span></a></li>
+        <li><a data-toggle="tab" href="#comments"><i class="fa fa-comment"></i><span class="hidden-phone"> Comments</span></a></li>
+        <li><a data-toggle="tab" href="#sets"><i class="fa fa-list"></i><span class="hidden-phone"> Sets</span></a></li>
+        <li><a data-toggle="tab" href="#authors"><i class="fa fa-user"></i><span class="hidden-phone"> Authors</span></a></li>
+        <li><a data-toggle="tab" href="#tags"><i class="fa fa-tag"></i><span class="hidden-phone"> Tags</span></a></li>
       </ul>
 
       <div class="tab-content">
@@ -79,14 +83,14 @@
               <a href="/popular">Popular</a> |
               <a href="/popular/recent">Recently liked</a>
           </small></h3>
-          <%= render :partial => 'spectrums/list' %>
+          <%= render :partial => 'spectrums/list', locals: { spectrums: @spectrums } %>
           <hr style="clear:both;" />
-          <%= will_paginate @spectrums, :param_name => 'spectrums_page', :params => {:anchor => "spectrums"}, renderer: BootstrapPagination::Rails %>
+          <%= will_paginate @spectrums, :param_name => 'page', :params => {:anchor => "spectrums"}, renderer: BootstrapPagination::Rails %>
         </div>
 
         <div class="tab-pane" id="comments">
         <h3><a name="authors"></a>Recent comments</h3>
-          <%= render :partial => 'comments/list' %>
+          <%= render :partial => 'comments/table', :locals => { :comments => @comments }%>
           <hr style="clear:both;" />
           <%= will_paginate @comments, :param_name => 'comments_page', :params => {:anchor => "comments"}, renderer: BootstrapPagination::Rails %>
         </div>

@@ -1,0 +1,58 @@
+<pre id="editor" style="height:200px;">
+spectrum.addAndParseTag('smooth:10'); // Smooth the spectrum
+
+// spectrum.addAndUploadTag('smooth:10'); // <== to save </pre>
+
+<p>
+  <a class="btn-editor-run btn btn-lg btn-primary">Run</a>
+  <a class="btn-editor-save btn btn-lg">Save as Gist</a>
+  <small>Read about the <a href="https://publiclab.org/wiki/spectral-workbench-api">Spectral Workbench API</a></small>
+</p>
+
+<script src="/lib/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+
+<script>
+
+var editor = ace.edit("editor");
+editor.setTheme("ace/theme/twilight");
+editor.session.setMode("ace/mode/javascript");
+
+jQuery(function($, undefined) {
+
+  $('.btn-editor-run').click(function() {
+
+    eval(editor.getValue());
+
+  });
+
+  $('.btn-editor-save').click(function() {
+
+    var data = {
+      "description": "A script saved from https://spectralworkbench.org",
+      "public": true,
+      "files": {
+        "main.js": {
+          "content": editor.getValue()
+        }
+      }
+    }
+    $.ajax({
+      url: 'https://api.github.com/gists',
+      type: 'POST',
+      dataType: 'json',
+      data: JSON.stringify(data)
+    })
+    .success( function(e) {
+      window.open(e.html_url);
+      $('.tab-tab-comments').click();
+      $('#comment-body').val("Script [saved as a Gist](" + e.html_url + ") from the scripting tab. Fork it to continue working on it!");
+      $('#comment-submit').click();
+    })
+    .error( function(e) {
+      console.warn("gist save error", e);
+    });
+
+  });
+
+});
+</script>

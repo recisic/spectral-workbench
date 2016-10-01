@@ -16,19 +16,25 @@
 <% end %>
 
 <form class="form" action="/spectrums" method="post" id="saveForm" target="_blank" onSubmit="$W.cancelSave();window.location='#page1'">
+
   <input placeholder="Title (required)" name="spectrum[title]" id="spectrum_notes" type="text" /><br />
-        <div class="input-prepend">
-          <span class="add-on"><i class="icon-tags"></i></span>
-          <input name="tags" id="spectrum_tags" type="text" placeholder="Tags: mobile, soil, sunlight" data-provide="typeahead" data-source="['calibration','soil','']">
-        </div>
-  <p>Recent tags:<span id="recent-tags"> 
-    <% if @calibration %>
-      (<a onClick="tag('<%= @calibration.tags.collect(&:name).join(',') %>')">all</a>)
-      <% @calibration.tags.each do |tag| %>
-        <a class="label label-info" onClick="tag(this.innerHTML);this.remove()"><%= tag.name %></a> 
+
+  <div class="input-prepend">
+    <span class="add-on"><i class="fa fa-tags"></i></span>
+    <input name="tags" id="spectrum_tags" type="text" placeholder="Tags: mobile, soil, sunlight" data-provide="typeahead" data-source="['calibration','soil','']">
+  </div>
+
+  <p>Recent tags:
+    <span id="recent-tags"> 
+      <% if @calibration %>
+        (<a onClick="tag('<%= @calibration.tags.collect(&:name).join(',') %>')">all</a>)
+        <% @calibration.normaltags.each do |tag| %>
+          <a class="label label-info" onClick="tag(this.innerHTML);this.remove()"><%= tag.name %></a> 
+        <% end %>
       <% end %>
-    <% end %>
-  </span></p>
+    </span>
+  </p>
+
   <script>
     tag = function(tag) {
       if ($('#spectrum_tags').val() =="") {
@@ -44,24 +50,31 @@
       })
     }
   </script>
+
   <br />
-  <textarea placeholder="Describe your spectrum: light source? Sample preparation? What's your goal?" style="span8" rows="6" name="spectrum[notes]" id="spectrum_notes"></textarea><br />
+  <textarea placeholder="Describe your spectrum: light source? Sample preparation? What's your goal?" style="span8" rows="6" name="spectrum[notes]" id="spectrum_notes"></textarea>
+  <br />
+
   <input name="dataurl" type="hidden" id="dataurl" />
+  <input name="video_row" type="hidden" id="video_row" />
   <input name="geotag" type="hidden" id="geotag" />
   <input name="lat" type="hidden" id="lat" />
   <input name="lon" type="hidden" id="lon" />
   <% if logged_in? %>
   <p><small>Choose a recent reference calibration, or use this as a new calibration.</small></p>
-  <select name="spectrum[calibration_id]" id="calibration_id">
-    <option value="calibration">[+] New calibration/uncalibrated</option>
-    <% current_user.tag('calibration',20).each do |spectrum| %>
-    <option value="<%= spectrum.id %>"><%= spectrum.title %> (<%= time_ago_in_words(spectrum.created_at) %> ago)</option>
-    <% end %>
+  <select name="spectrum[calibration_id]" id="calibration_id" style="width:100%;">
+    <%= render partial: 'capture/calibrations', locals: { calibrations: @calibrations, calibration: @calibration } %>
   </select>
   <% end %>
+
 </form>
+
+<% if logged_in? %>
+  <a class="btn btn-primary btn-large" href="#capture" onClick="$('#saveForm').submit();$('#spectrum-preview').hide();$('#capture-btn').addClass('active');$('#settings-btn').removeClass('active');" data-toggle="tab">Save with selected calibration</a>
+  <a class="btn btn-large" href="#capture" onClick="$('#calibration_id').val('calibration');$('#saveForm').submit();$('#spectrum-preview').hide();$('#capture-btn').addClass('active');$('#settings-btn').removeClass('active');" data-toggle="tab">Save & calibrate later</a>
+<% end %>
+
 <a class="btn btn-large" href="#capture" onClick="$W.cancelSave();$('#capture-btn').addClass('active');$('#settings-btn').removeClass('active');" data-toggle="tab">&laquo; Back</a>
-<% if logged_in? %><a class="btn btn-primary btn-large" href="#capture" onClick="$('#saveForm').submit();$('#spectrum-preview').hide();$('#capture-btn').addClass('active');$('#settings-btn').removeClass('active');" data-toggle="tab">Save</a><% end %>
 
 <p>By uploading your data, you agree to release it under the <a href="http://creativecommons.org/publicdomain/zero/1.0/">Creative Commons Zero license</a></p>
 </div>

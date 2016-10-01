@@ -20,6 +20,19 @@ class CaptureControllerTest < ActionController::TestCase
     assert_response :success
     assert_not_nil :spectrums
     assert_not_nil :calibration
+    assert_not_nil :calibrations
+  end
+
+  test "should get capture with calibration_id" do
+    session[:user_id] = users(:quentin).id # log in
+    get :index, calibration_id: spectrums(:one)
+    assert_response :success
+  end
+
+  test "should get capture with calibration_id = 'calibrate'" do
+    session[:user_id] = users(:quentin).id # log in
+    get :index, calibration_id: 'calibrate'
+    assert_response :success
   end
 
 end

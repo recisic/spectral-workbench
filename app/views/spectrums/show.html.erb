@@ -9,6 +9,11 @@
 
   <% if logged_in? %>
     <% if @spectrum.author == current_user.login %>
+      <% if @spectrum.has_operations %>
+        <div class="alert alert-warning">
+          This spectrum has been edited in the new Spectral Workbench 2.0 interface. <a href="/spectrums/show2/<%= @spectrum.id %>">Continue working with it there</a> or you may encounter compatibility issues.
+        </div>
+      <% end %>
       <% if !@spectrum.calibrated %>
         <div class="alert alert-warning"><button type="button" class="close" data-dismiss="alert">×</button>
           This spectrum is not yet calibrated. <a class="btn btn-primary btn-small" data-toggle="modal" href="#calibratemodal1" onClick="$('calibrate-begin').focus()">Calibrate</a>
@@ -24,7 +29,7 @@
 
   <% if mobile? && !@spectrum.calibrated %>
     <div class="alert alert-error"><button type="button" class="close" data-dismiss="alert">×</button>
-      <i class="icon icon-exclamation-sign"></i> Calibration is easiest <b>from a computer</b>, after which you can use it from your phone.
+      <i class="fa fa-exclamation-circle"></i> Calibration is easiest <b>from a computer</b>, after which you can use it from your phone.
     </div>
   <% end %>
 
@@ -35,15 +40,16 @@
 
     <div class="navbar navbar-inverse navbar-static-bottom" style="margin:0;">
       <div class="navbar-inner">
-        <a id="$('#calibrate-begin').focus()" data-toggle="modal" href="#calibratemodal1" class="btn btn-primary"><i class="icon icon-white icon-screenshot"></i><span class="hidden-phone"> Calibrate</span></a>
+        <a id="$('#calibrate-begin').focus()" data-toggle="modal" href="#calibratemodal1" class="btn btn-primary"><i class="fa fa-white fa-crosshairs"></i><span class="hidden-phone"> Calibrate</span></a>
 
-        <a href="#embedmodal" class="btn btn-inverse hidden-phone" data-toggle="modal"><i class="icon icon-white icon-share"></i><span class="hidden-phone"> Embed</span></a>
-        <%= render :partial => "spectrums/show/embed" %>
-        <a class="btn btn-inverse" data-toggle="modal" href="#setmodal"><i class="icon icon-white icon-plus-sign"></i><span class="hidden-phone"> Add to set</span></a>
-        <a class="btn btn-inverse hidden-phone" id="createSet" href="javascript:void(0);"><i class="icon icon-white icon-list"></i><span class="hidden-phone"> Save as set</span></a>
-        <a data-toggle="modal" class="btn btn-inverse" href="#comparemodal"><i class="icon icon-white icon-align-left"></i><span class="hidden-phone"> Compare</span></a>
+        <a href="#embed-modal" class="btn btn-inverse hidden-phone" data-toggle="modal"><i class="fa fa-white fa-share"></i><span class="hidden-phone"> Embed</span></a>
+        <%= render partial: "embed/modal", locals: { datum: @spectrum, type: :spectrum } %>
+        <a class="btn btn-inverse" data-toggle="modal" href="#setmodal"><i class="fa fa-white fa-plus-circle"></i><span class="hidden-phone"> Add to set</span></a>
+        <a class="btn btn-inverse hidden-phone" id="createSet" href="javascript:void(0);"><i class="fa fa-white fa-list"></i><span class="hidden-phone"> Save as set</span></a>
+        <a data-toggle="modal" class="btn btn-inverse" href="#comparemodal"><i class="fa fa-white fa-align-left"></i><span class="hidden-phone"> Compare</span></a>
         <a class="btn btn-inverse" href="/match/search/<%= @spectrum.id %>">Find similar</a>
         <% if logged_in? && current_user.id == 1 && @spectrum.calibrated %><a href="/key/<%= @spectrum.id %>" class="btn btn-inverse">Make key</a><% end %>
+        <a href="/spectrums/show2/<%= @spectrum.id %>" class="btn btn-inverse">Preview 2.0 beta</a>
 
         <%= render :partial => "spectrums/show/tools" %>
         <b class="pull-right" style="padding-top:10px;margin-right:10px;color:#ffffff;"><span id="wavelength"></span> <span id="#unit_label">nm</span></b>
@@ -58,15 +64,14 @@
       <p>uploaded by <a href="<%= profile_path(@spectrum.author) %>"><%= @spectrum.author %></a> | <%= @spectrum.created_at.to_s(:long) %></p>
       <% if @spectrum.lat != 0 && @spectrum.lon != 0 %><p>Collected at: Lat: <%= @spectrum.lat %>, Lon: <%= @spectrum.lon %> (<a href="http://www.openstreetmap.org/?lat=<%= @spectrum.lat %>&lon=<%= @spectrum.lon %>&zoom=10&layers=M">View in OpenStreetMap</a>)</p><% end %>
 
-      <%= render :partial => "tags/tagging" %>
+      <%= render :partial => "tags/tagging", locals: { datum: @spectrum, type: @spectrum.class.name.downcase, legacy: true } %>
 
       <div class="btn-group hidden-phone">
         <hr />
-        <a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>.json"><b>JSON</b></a>
-        <a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>.csv"><b>CSV</b></a>
-        <a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>.csv?raw=true"><b>CSV (raw)</b></a>
-        <a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>.xml"><b>XML</b></a>
-        <a rel="tooltip" class="btn btn-small" href="http://publiclab.org/wiki/spectral-workbench-exporting" title="About export formats"><i class="icon icon-question-sign"></i></a>
+        <a class="btn btn-small" href="/spectrums/latest/<%= @spectrum.id %>.json"><b>JSON</b></a>
+        <a class="btn btn-small" href="/spectrums/latest/<%= @spectrum.id %>.csv"><b>CSV</b></a>
+        <a class="btn btn-small" href="/spectrums/latest/<%= @spectrum.id %>.xml"><b>XML</b></a>
+        <a rel="tooltip" class="btn btn-small" href="http://publiclab.org/wiki/spectral-workbench-exporting" title="About export formats"><i class="fa fa-question-circle"></i></a>
       </div>
 
       <div class="hidden-phone">
@@ -100,32 +105,38 @@
     <div class="span8">
       <% if logged_in? && current_user.login == @spectrum.author %>
         <div class="btn-group pull-right" style="margin-top:10px;margin-left:10px;">
-          <a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>/edit"><i class="icon icon-pencil"></i> Edit</a>
-          <%= link_to '<i class="icon icon-remove-sign"></i> Delete'.html_safe, "/spectrums/destroy/"+@spectrum.id.to_s, :confirm => 'Are you sure?', :class => "btn btn-small" %>
+          <a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>/edit"><i class="fa fa-pencil"></i> Edit</a>
+          <%= link_to '<i class="fa fa-trash"></i> Delete'.html_safe, "/spectrums/destroy/"+@spectrum.id.to_s, :confirm => 'Are you sure?', :class => "btn btn-small" %>
         </div>
       <% end %>
 
         <div style="margin-top:10px;margin-left:10px;" class="pull-right btn-group">
-          <a <% if !logged_in? %>rel="tooltip" title="Log in first!" <% end %>class="btn btn-small"><i class="icon icon-star"></i> <span id="liked"><%= @spectrum.like_count %></span> like<% if @spectrum.like_count != 1 %>s<% end %></a>
-          <% if logged_in? && current_user.login != @spectrum.author %>
-          <a id="likebtn" class="btn btn-small" href="#" onClick="$W.toggle_like(<%= @spectrum.id %>)"><i class="icon icon-star-empty"></i>
-            <span id="likeaction">
-            <% if @spectrum.liked_by(current_user.id) %>Unlike<% else %> Like<% end %>
-            </span>
-          </a>
-          <% end %>
+          <%= render partial: "likes/buttons", locals: { datum: @spectrum } %>
         </div>
 
-      <div id="share" class="pull-right" style="margin-top:14px;">
-        <div class="fb-like" data-send="false" data-layout="button_count" data-width="50" data-show-faces="false" style="vertical-align:top;zoom:1;*display:inline"></div>
-        <a href="https://twitter.com/share" class="twitter-share-button">Tweet</a>
-      </div>
-
-      <h3>Notes</h3>
-
-      <p><% if @spectrum.notes %><%=raw RDiscount.new(@spectrum.notes).to_html %><% end %></p>
-
-      <%= render :partial => "spectrums/show/commenting" %>
+        <div id="share" class="pull-right" style="margin-top:14px;">
+          <div class="fb-like" data-send="false" data-layout="button_count" data-width="50" data-show-faces="false" style="vertical-align:top;zoom:1;*display:inline"></div>
+          <a href="https://twitter.com/share" class="twitter-share-button">Tweet</a>
+        </div>
+       
+        <h3>Notes</h3>
+       
+        <% if @spectrum.has_powertag('calibration') %>
+          <p>This spectrum used the calibration from <a href="/spectrums/<%= @spectrum.powertag('calibration') %>"><%= @spectrum.calibration.title %></a>.</p>
+        <% end %>
+       
+        <p><% if @spectrum.notes %><%=raw RDiscount.new(@spectrum.notes).to_html %><% end %></p>
+       
+        <a name="comments"></a>
+        <h3>Comments (<%= @spectrum.comments.length %>)</h3>
+       
+        <div class="row-fluid">
+       
+          <div class="span8">
+            <%= render partial: 'comments/list', locals: { datum: @spectrum, comments: @spectrum.comments } %>
+          </div>
+       
+        </div>
 
       </div>
     </div>
@@ -143,7 +154,7 @@ jQuery(document).ready(function() {
     mode:"combined",
     title: "<%= @spectrum.title.gsub('"',"'") %>",
     form_authenticity_token: "<%= form_authenticity_token %>",
-    spectrum_data: <%=raw @spectrum.data.gsub('"',"'") %>
+    spectrum_data: <%=raw Spectrum.find(@spectrum.id).data.gsub('"',"'") %>
   })
 })
 

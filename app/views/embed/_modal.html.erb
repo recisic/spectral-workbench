@@ -1,0 +1,30 @@
+<div class="swb-embed-modal modal hide fade" id="embed-modal">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <b>Embed this data on your website</b>
+  </div>
+  <div class="modal-body" style="max-height:600px;">
+
+    <div class="row-fluid">
+      <div class="span8 embed-preview">
+        
+      </div>
+     
+      <div class="span4">
+        <p>Copy this code onto your blog to share your spectral data:</p>
+        <textarea onClick="$(this).focus()" id="embed-code" cols="60" rows="6"><iframe width='100%' height='<%= type == :spectrum  ? 450 : 700 %>px' style='border:none;' src='//spectralworkbench.org/<%= type %>s/embed2/<%= datum.id %>'></iframe></textarea>
+      </div>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <a data-dismiss="modal" href="#" class="btn">Close</a>
+  </div>
+</div> 
+<script>
+  (function() {
+    $('#embed-modal').on('show',function(){
+      $('.embed-preview').html("<iframe width='100%' height='<%= type == :spectrum ? 450 : 700 %>px' style='border:none;' src='/<%= type %>s/embed2/<%= datum.id %>'></iframe>")
+    })
+  })()
+</script>

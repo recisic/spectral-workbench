@@ -1,0 +1,81 @@
+<% if spectrums.length == 0 %>
+<p>No results</p>
+<% else %>
+<div class="table-scroll-container list">
+  <table class="table spectra">
+    <% spectrums.each do |spectrum| %>
+      <tr class="spectrum spectrum-<%= spectrum.id %>" id="s<%= spectrum.id %>">
+
+        <% if defined? multiple %>
+          <td style="text-align:center;">
+            <input data-id="<%= spectrum.id %>" class="visible" type="checkbox" onChange="$('tr.spectrum-<%= spectrum.id %>').toggleClass('selected');" />
+          </td>
+        <% end %>
+
+        <% if logged_in? %>
+          <%# expensive, but worth it %>
+          <td style="text-align:center;" class="like-container-<%= spectrum.id %>">
+            <a class="btn-like" onClick="SpectralWorkbench.UI.Misc.toggleLike(<%= spectrum.id %>)">
+              <i style="color:#888;" class="fa fa-star<% unless spectrum.liked_by(current_user.id) %>-o<% end %>"></i>
+            </a>
+          </td>
+        <% end %>
+
+        <td style="width:14px;"> 
+          <% if spectrum.calibrated %>
+            <i rel="tooltip" 
+               title="This spectrum is wavelength calibrated!" 
+               style="font-size:13px;vertical-align:middle;color:#0c5;" 
+               class='fa fa-check-sign'></i>
+          <% end %>
+
+        </td>
+
+        <td>
+          <b>#<%= spectrum.id %>:</b> <a href="/spectrums/<%= spectrum.id %>"><%= spectrum.title %></a>
+          <% if spectrum.has_powertag('forked') %>
+            (<a href='/spectrums/<%= spectrum.powertag('forked') %>'>fork</a>)
+          <% end %>
+        </td>
+
+        <td>by <a href="/profile/<%= spectrum.user.login %>"><%= spectrum.user.login %></a></td>
+
+        <td><%= time_ago_in_words(spectrum.created_at) %> ago</td>
+
+        <td style="text-align:right;">
+          <a class="btn btn-mini btn-spectrum-apply" 
+             data-title="<%= spectrum.title %>" 
+             data-author="<%= spectrum.author %>"
+             <% if spectrum.snapshots.length > 0 %>data-snapshot="<%= spectrum.latest_snapshot.id %>"<% end %>
+             data-id="<%= spectrum.id %>">Apply
+          </a>
+        </td>
+
+      </tr>
+    <% end %>
+  </table>
+
+  <%= will_paginate spectrums, renderer: BootstrapPagination::Rails, inner_window: 1 %>
+
+  <script>
+
+    $(function () {
+      $('.pagination a').click(function () {
+        $.get(
+          this.href,
+          {
+            own: <%= params[:own] == 'true' %>
+          }
+        ).done(function(response) {
+
+            $('.results').html(response);
+
+        });
+        return false;
+      });
+    });
+
+  </script>
+
+</div>
+<% end %>

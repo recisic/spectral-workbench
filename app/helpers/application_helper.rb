@@ -24,13 +24,18 @@ module ApplicationHelper
     user_id = session[:user_id] 
     if user_id
       begin
-        @user = User.find(user_id)
+        user = User.find(user_id)
       rescue
-        @user = nil
+        user = nil
       end
     else
-      @user = nil
+      user = nil
     end
+  end
+
+  # for v2 embeds
+  def is_embed?
+    params[:action] == 'embed2'
   end
 
   # add this to app/helpers/application_helper.rb

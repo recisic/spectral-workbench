@@ -2,7 +2,7 @@ require 'uri'
 
 class SessionsController < ApplicationController
 
-  @@openid_url_base  = "http://publiclab.org/people/"
+  @@openid_url_base  = "https://publiclab.org/people/"
   @@openid_url_suffix = "/identity"
 
 
@@ -37,6 +37,7 @@ class SessionsController < ApplicationController
       redirect_to '/sites/' + id.to_s + '/upload'
     else
       if back_to 
+        back_to = "/dashboard" if back_to == "/"
         redirect_to back_to 
       else
         redirect_to '/sites'

@@ -1,11 +1,8 @@
 source 'https://rubygems.org'
-source 'https://rails-assets.org'
+#source 'https://rails-assets.org'
 
 ruby '2.1.2'
 gem 'rails', '~>3.2'
-
-# Bundle edge Rails instead:
-# gem 'rails', :git => 'git://github.com/rails/rails.git'
 
 # Database handling
 group :sqlite do
@@ -13,16 +10,12 @@ group :sqlite do
 end
 
 group :mysql do
-  gem 'mysql2'
-  gem 'activerecord-mysql-adapter'
+  gem 'mysql2', '~> 0.3.10'
 end
 
 # Gems used only for assets and not required
 # in production environments by default.
 group :assets do
-  #gem 'sass-rails',   '~> 3.2.3'
-  #gem 'coffee-rails', '~> 3.2.1'
-
   # See https://github.com/sstephenson/execjs#readme for more supported runtimes
   # gem 'therubyracer', :platforms => :ruby
 
@@ -33,24 +26,21 @@ gem 'rmagick'#, :require => "RMagick"
 gem 'mime-types'#, '1.18'
 gem 'jquery-rails'
 gem 'passenger'
-gem 'recaptcha', :require => "recaptcha/rails"
+gem 'recaptcha', '3.0.0', :require => "recaptcha/rails"
 gem 'cocaine', '~>0.5.3'
 gem 'redcarpet', '2.1.1'
 
 gem 'rdiscount', '1.6.8'
-gem 'will_paginate'
+gem 'will_paginate', '3.0.7'
 gem 'will_paginate-bootstrap', '0.2.5'
 gem 'paperclip', '>= 4.1.1'
+
+gem 'tzinfo', '0.3.49'
 
 gem 'ruby-openid'
 gem 'open_id_authentication'
 
 gem 'rack-offline', '>=0.6.4'
-
-group :development, :test do
-  #gem 'rspec-rails'
-  #gem 'factory_girl_rails'
-end
 
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'
@@ -63,5 +53,3 @@ end
 
 # Deploy with Capistrano
 # gem 'capistrano'
-
-#gem "mocha", :group => :test

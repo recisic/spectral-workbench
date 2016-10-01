@@ -1,0 +1,94 @@
+<div class="tools-index row-fluid">
+
+  <div class="span4 tool-menu">
+
+    <% if logged_in? && @spectrum.user_id != current_user.id %>
+      <p class="alert alert-warning">You can only use tools if you own the spectrum. Fork this spectrum to edit it.</p>
+      <script>
+        $(function () { $('.tool-menu .owner-tools .btn').addClass('disabled'); });
+      </script>
+    <% elsif !logged_in? %>
+      <p class="alert alert-warning">Log in to use these tools.</p>
+      <script>
+        $(function () { $('.tool-menu .owner-tools .btn').addClass('disabled'); });
+      </script>
+    <% end %>
+
+    <h5>Versioning <a href="//publiclab.org/wiki/spectral-workbench-tools#Versioning"><i style="color:#aaa;" class="fa fa-question-circle"></i></a></h5>
+    <p><a class="btn btn-small" href="/spectrums/fork/<%= @spectrum.id %>"><i class="fa fa-code-fork"></i> Fork this spectrum</a> and work on a copy</p>
+
+    <div class="owner-tools">
+
+      <h5>Data processing and display <a href="//publiclab.org/wiki/spectral-workbench-tools#Data+processing+and+display"><i style="color:#aaa;" class="fa fa-question-circle"></i></a></h5>
+
+      <p><a class="btn btn-small tool-calibrate<%= ' btn-primary' unless @spectrum.calibrated %>"><i class="fa fa-crosshairs<%= ' fa-white' unless @spectrum.calibrated %>"></i> Calibrate</a></p>
+      <p><a class="btn btn-small tool-copy-calibration"><i class="fa fa-copy"></i>           Copy calibration</a></p>
+      <p><a class="btn btn-small tool-subtraction">     <i class="fa fa-minus-circle"></i> Subtract spectrum</a></p>
+      <p><a class="btn btn-small tool-range">           <i class="fa fa-arrows-h"></i>       Limit wavelength range</a></p>
+      <p><a class="btn btn-small tool-smooth">          Smooth</a></p>
+      <p><a class="btn btn-small tool-transform">       Transform</a></p>
+      <p><a class="btn btn-small tool-blend">           Blend</a></p>
+
+    </div>
+
+    <h5>Comparison &amp; Sets <a href="//publiclab.org/wiki/spectral-workbench-tools#Comparison+&amp;+Sets"><i style="color:#aaa;" class="fa fa-question-circle"></i></a></h5>
+
+    <p><a class="btn btn-small tool-compare"><i class="fa fa-balance-scale"></i> Compare</a></p>
+    <p><a class="btn btn-small tool-similar"><i class="fa fa-magnet"></i>        Find similar</a></p>
+
+    <div class="owner-tools">
+
+      <h5>Data extraction <a href="//publiclab.org/wiki/spectral-workbench-tools#Data+extraction"><i style="color:#aaa;" class="fa fa-question-circle"></i></a></h5>
+
+      <p><a class="btn btn-small tool-cross-section">Set new cross-section</a></p>
+      <p><a class="btn btn-small" data-confirm="Are you sure? You can calibrate a reversed spectrum without flipping it manually, and this can affect later calibrations based on this data." href="/spectra/reverse/<%= datum.id %>">Flip image</a> horizontally</p>
+
+    </div>
+
+    <hr />
+
+    <p><a class="btn btn-small" href="/capture?calibration_id=<%= @spectrum.id %>"><i class="fa fa-camera"></i> Capture using this calibration</a></p>
+    <p><a class="btn btn-small" href="/spectrums/<%= @spectrum.id %>?v=1">Use legacy 1.0 interface</a></p>
+
+    <p>Want a tool that's not listed here? <a href="/wiki/spectral-workbench-tools#Wishlist">Add a request</a> to the Wishlist, or <a href="//publiclab.org/wiki/spectral-workbench-api">learn how to write your own tools</a>.</p>
+
+  </div>
+
+  <div style="display:none;" class="swb-datum-tool-pane span8">
+
+    <%= render partial: 'macros/toolPane' %>
+
+  </div>
+
+  <div class="span8 macros-pane">
+
+    <table class="table operations">
+
+      <tr>
+        <th style="width: 34px;"></th>
+        <th>Operation</th>
+        <th style="width: 70px;">Date</i></th>
+        <th>Description</th>
+        <th></th>
+      </tr>
+
+    </table>
+
+    <small>
+
+      <p><a href="//publiclab.org/wiki/spectral-workbench-operations">Operations</a> enable reversible modification of data -- they act like filters which process the data. The graph you see above represents the data <b>after</b> these operations have been run. Delete them to undo their effects, or to apply them in a new order.</p>
+
+      <ul>
+
+        <li>The <i class="fa fa-thumb-tack"></i> thumbtack symbol indicates that data has been <a target="_blank" href="https://publiclab.org/wiki/spectral-workbench-snapshots">saved in a snapshot</a> upon running that operation.</li>
+
+        <li>The <i class="fa fa-chevron-circle-down"></i> symbol indicates that the operation's data snapshot is being referred to by another operation. Click it to learn more.</li>
+
+        <li>Operations with a <code>#000</code>-style suffix, like <span class="label purple">subtract:3243#2414</span> are referring to a specific snapshot (in this example, <b>#2414</b>) of another spectrum. <a href="https://publiclab.org/wiki/spectral-workbench-snapshots#References+vs.+Snapshots">Click to learn more</a>.</li>
+      <ul>
+
+    </small>
+
+  </div>
+
+</div>

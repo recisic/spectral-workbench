@@ -11,9 +11,10 @@ class User < ActiveRecord::Base
   validates_length_of       :email,    :within => 6..100 #r@a.wk
   validates_uniqueness_of   :email
 
-  has_many :macros, :dependent => :destroy
-  has_many :spectrums, :dependent => :destroy
-  #has_many :spectra_sets, :dependent => :destroy
+  has_many :macros,       :dependent => :destroy
+  has_many :spectrums,    :dependent => :destroy
+  has_many :spectra_sets, :dependent => :destroy
+  has_many :comments,     :dependent => :destroy
 
   # HACK HACK HACK -- how to do attr_accessible from here?
   # prevents a user from submitting a crafted form that bypasses activation
@@ -25,6 +26,10 @@ class User < ActiveRecord::Base
     UserMailer.welcome_email(self)
   end
 
+  def sets
+    self.spectra_sets
+  end
+
   def self.weekly_tallies
     # past 52 weeks of data
     weeks = {}
@@ -34,22 +39,12 @@ class User < ActiveRecord::Base
     weeks
   end
 
-  # we need to transition this to user.id based lookup
-  def sets
-    SpectraSet.where(author: self.login)
-  end
-
   def spectrum_count
     Spectrum.count(:all, :conditions => {:user_id => self.id})
   end
 
   def set_count
-    SpectraSet.count(:all, :conditions => {:author => self.login})
-  end
-
-  # we need to transition this to user.id based lookup
-  def comments
-    Comment.find_all_by_author(self.login)
+    SpectraSet.count(:all, :conditions => {:user_id => self.id})
   end
 
   def received_comments
@@ -58,7 +53,7 @@ class User < ActiveRecord::Base
     spectrums.each do |spectrum|
       spectrum_ids << spectrum.id
     end
-    Comment.find_all_by_spectrum_id(spectrum_ids.uniq, :conditions => ["author != ?",self.login], :limit => 10, :order => "id DESC")
+    Comment.find_all_by_spectrum_id(spectrum_ids.uniq).where("user_id != ?",self.id).limit(10).order("id DESC")
   end
 
   # Authenticates a user by their login name and unencrypted password.  Returns the user or nil.
@@ -81,12 +76,20 @@ class User < ActiveRecord::Base
     write_attribute :email, (value ? value.downcase : nil)
   end
 
+  # most recent;
+  # by default, don't return forked calibrations
   def last_calibration 
-    self.tag('calibration',20).first
+    self.calibrations.where('tags.name NOT LIKE (?)', "forked:%")
+                     .first
   end
 
   def calibrations
-    self.tag('calibration',20)
+    # re-enable this optimization once we deprecate v1
+    #Spectrum.select("spectrums.id, spectrums.title, spectrums.created_at, spectrums.user_id, spectrums.author, spectrums.calibrated, spectrums.photo_file_name")
+    Spectrum.joins(:tags)
+            .where(user_id: self.id)
+            .where('tags.name = (?) OR tags.name LIKE (?)', "calibration", "linearCalibration:%")
+            .order("spectrums.created_at DESC")
   end
 
   # find spectra by user, tagged with <name>
@@ -96,5 +99,15 @@ class User < ActiveRecord::Base
     spectra = Spectrum.find spectrum_ids
     spectra.reverse ||= []
   end  
+
+  # for API use; add regeneration later
+  def token
+    self.created_at.to_i.to_s.each_byte.map { |b| b.to_s(16) }.join
+  end
+
+  def self.find_by_token(token)
+    t = Time.at(token.scan(/../).map { |x| x.hex.chr }.join.to_i)
+    User.where("created_at > ? AND created_at < ?", t - 1.second, t + 1.second).first
+  end
 
 end
